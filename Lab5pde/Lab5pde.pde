@@ -21,6 +21,7 @@ float distanceArray[] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
                          0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 float distanceReading = 0.0;
 float mappedDistanceReading = 0.0;
+float threshold = 50.0;
 
 int shortDistances = 0;
 int middleDistances = 0;
@@ -28,6 +29,7 @@ int longDistances = 0;
 int numberOfTweets = 0;
 int graphXPos = 0;
 int updateFlag = 0;
+int thresholdFlag = 0;
 
 String mostRecentTweet = "tweet";
 
@@ -93,16 +95,20 @@ void draw() {
   */
 }
 
-/*
+
 void tweet() {
+  /*
   try {
     Status status = twitter.updateStatus("This is a tweet sent from Processing");
     System.out.println("Status updated to [" + status.getText() + "].");
   } catch (TwitterException te) {
     System.out.println("Error: "+ te.getMessage());
   }
+  */
+  mostRecentTweet = "Some other tweet";
+  numberOfTweets++;
 }
-*/
+
 
 void keyPressed() {
   //tweet();
@@ -117,6 +123,14 @@ void serialEvent(Serial arduinoPort) {
   
   try {                                     // Try reading data
     distanceReading = float(dataString);    // Try converting the data into a float
+    
+    if (distanceReading < threshold && thresholdFlag == 1) {
+      thresholdFlag = 0;
+      tweet();
+    } else if (distanceReading >= threshold && thresholdFlag == 0) {
+      thresholdFlag = 1;
+      tweet();
+    }
   } catch (Exception e) {                   // If conversion fails
     return;                                 // Stop
   }
