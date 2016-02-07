@@ -97,16 +97,23 @@ void draw() {
 
 
 void tweet() {
-  /*
   try {
-    Status status = twitter.updateStatus("This is a tweet sent from Processing");
-    System.out.println("Status updated to [" + status.getText() + "].");
+    Status status;
+    
+    if (distanceReading < 50.0) {
+      status = twitter.updateStatus(getDateTime() + "\nAn object is in range!\nMeasurements: " +
+                                    (shortDistances + middleDistances + longDistances + 1));
+    } else {
+      status = twitter.updateStatus(getDateTime() + "\nNo objects in range at the moment.\nMeasurements: " +
+                                    (shortDistances + middleDistances + longDistances + 1));
+    }
+    
+    println("Status updated to [" + status.getText() + "].");
+    mostRecentTweet = status.getText();
+    numberOfTweets++;
   } catch (TwitterException te) {
     System.out.println("Error: "+ te.getMessage());
   }
-  */
-  mostRecentTweet = "Some other tweet";
-  numberOfTweets++;
 }
 
 
@@ -257,4 +264,43 @@ void insertInArray(float array[], float insert) {
   }
   
   array[0] = insert;            // Place insert at beginning of array
+}
+
+// --------------------------------------------------
+// Function for date formatting
+// --------------------------------------------------
+
+/*
+ * This function returns the current time and date formatted nicely
+ */
+String getDateTime() {
+  String dateTime = "";
+  dateTime += str(day());
+  
+  switch(month()) {
+    case 1:  dateTime += " Jan "; break;
+    case 2:  dateTime += " Feb "; break;
+    case 3:  dateTime += " Mar "; break;
+    case 4:  dateTime += " Apr "; break;
+    case 5:  dateTime += " May "; break;
+    case 6:  dateTime += " Jun "; break;
+    case 7:  dateTime += " Jul "; break;
+    case 8:  dateTime += " Aug "; break;
+    case 9:  dateTime += " Sep "; break;
+    case 10: dateTime += " Oct "; break;
+    case 11: dateTime += " Nov "; break;
+    case 12: dateTime += " Dec "; break;
+    default: dateTime += " --- "; break;
+  }
+  
+  dateTime += str(year());
+  dateTime += ", ";
+  
+  if (hour() > 12) {
+    dateTime += str(hour() % 12) + ":" + str(minute()) + ":" + str(second()) + " PM";
+  } else {
+    dateTime += str(hour()) + ":" + str(minute()) + ":" + str(second()) + " AM";
+  }
+  
+  return dateTime;
 }
