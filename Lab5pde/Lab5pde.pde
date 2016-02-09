@@ -17,21 +17,21 @@ PFont f;      // Font used for the GUI
 PFont fb1;    // Font used for the GUI
 PFont fb2;    // Font used for the GUI
 
-float distanceArray[] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
-                         0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-float distanceReading = 0.0;
-float mappedDistanceReading = 0.0;
-float threshold = 50.0;
+float distanceArray[] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,    // Array to store 20 most recent distance
+                         0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};   // measurements
+float distanceReading = 0.0;          // Most recent distance measured
+float mappedDistanceReading = 0.0;    // The distance value mapped to fit on the GUI graph
+float threshold = 50.0;               // Threshold - if it is crossed, a tweet is sent
 
-int shortDistances = 0;
-int middleDistances = 0;
-int longDistances = 0;
-int numberOfTweets = 0;
-int graphXPos = 0;
-int updateFlag = 0;
-int thresholdFlag = 0;
+int shortDistances = 0;               // Number of measurements between 2 and 20 cm
+int middleDistances = 0;              // Number of measurements between 20 and 100 cm
+int longDistances = 0;                // Number of measurements above 100 cm
+int numberOfTweets = 0;               // Total number of tweets sent
+int graphXPos = 0;                    // Variable for x position of graph
+int updateFlag = 0;                   // Flag used for updating the GUI
+int thresholdFlag = 0;                // Flag used to check if a tweet should be sent
 
-String mostRecentTweet = "tweet";
+String mostRecentTweet = "tweet";     // The most recent tweet that has been sent
 
 void setup() {
   /* Set up the twitter object */
@@ -62,13 +62,13 @@ void setup() {
   fill(45, 45, 45);                           // Set the ractangle colour
   rect(270, 350, 520, 100);                   // Box for distance graph
   
-  textFont(createFont("Arial", 12, true));
-  textAlign(RIGHT);
-  fill(225, 225, 225);
-  text("500.0", 310, 370);
-  text("0.0", 310, 440);
+  textFont(createFont("Arial", 12, true));    // Set the font (one-time use, so the font is not defined in a variable)
+  textAlign(RIGHT);                           // Right align the text
+  fill(225, 225, 225);                        // Set the colour to be a light-gray
+  text("500.0", 310, 370);                    // Show the graph's upper range
+  text("0.0", 310, 440);                      // Show the graph's lower range
   
-  updateGUI();
+  updateGUI();                                // Initialize and update the GUI
   
   /* Set up serial port */
   arduinoPort = new Serial(this, Serial.list()[0], 9600);
@@ -76,31 +76,19 @@ void setup() {
 }
 
 void draw() {
-  if (updateFlag == 1) {
-    updateGUI();
-    updateFlag = 0;
+  if (updateFlag == 1) {    // If the flag is 1
+    updateGUI();            // Update the GUI
+    updateFlag = 0;         // Reset the flag
   }
-  
-  /* Code below is used for testing the GUI */
-  /*
-  if (numberOfTweets % 30 == 0) {
-    mostRecentTweet += "1";
-    insertInArray(distanceArray, 250.0);
-  } else if (numberOfTweets % 10 == 0) {
-    mostRecentTweet += "!";
-    insertInArray(distanceArray, 500.0);
-  }
-  
-  delay(500);
-  */
 }
 
 
 void tweet() {
-  try {
+  try {  // Try sending a tweet
     Status status;
     
-    if (distanceReading < 50.0) {
+    // Note: +1 for number of measurements because the tweet is sent before the measure number is incremented
+    if (distanceReading < threshold) {
       status = twitter.updateStatus(getDateTime() + "\nAn object is in range!\nMeasurements: " +
                                     (shortDistances + middleDistances + longDistances + 1));
     } else {
@@ -116,11 +104,6 @@ void tweet() {
   }
 }
 
-
-void keyPressed() {
-  //tweet();
-}
-
 void serialEvent(Serial arduinoPort) {
   // Get ASCII string output by the arduino
   String dataString = arduinoPort.readStringUntil('\n');
@@ -131,6 +114,7 @@ void serialEvent(Serial arduinoPort) {
   try {                                     // Try reading data
     distanceReading = float(dataString);    // Try converting the data into a float
     
+    // Tweet only when an object has crossed the threshold - sends only one tweet as to not spam twitter
     if (distanceReading < threshold && thresholdFlag == 1) {
       thresholdFlag = 0;
       tweet();
@@ -221,29 +205,30 @@ void updateGUI() {
   }
   
   // Update the graph
-  if (distanceArray[0] <= 0.0 || distanceArray[0] > 500.0) {
-    stroke(45, 45, 45);
-    line(320 + graphXPos, 440, 320 + graphXPos, 360);
+  if (distanceArray[0] <= 0.0 || distanceArray[0] > 500.0) {  // If not valid range
+    // Here, it is as if no value is recorded when the measure is out of range
+    stroke(45, 45, 45);                                       // Set the line colour to the background colour
+    line(320 + graphXPos, 440, 320 + graphXPos, 360);         // Overwrite the line below it (erases any previous blue lines)
   } else {
-    mappedDistanceReading = map(distanceArray[0], 0, 500, 0, 80);
+    mappedDistanceReading = map(distanceArray[0], 0, 500, 0, 80);              // Map the measurement to the graph size
   
-    stroke(45, 45, 45);
-    line(320 + graphXPos, 440, 320 + graphXPos, 360);
+    stroke(45, 45, 45);                                                        // Set the line colour
+    line(320 + graphXPos, 440, 320 + graphXPos, 360);                          // Overwrite any lines below this one
   
-    stroke(85, 172, 238);
-    line(320 + graphXPos, 440, 320 + graphXPos, 440 - mappedDistanceReading);
+    stroke(85, 172, 238);                                                      // Set line colour to blue
+    line(320 + graphXPos, 440, 320 + graphXPos, 440 - mappedDistanceReading);  // Display line of proportional size
   }
   
-  stroke(45, 45, 45);    // This ensures that the borders of the boxes remain the same colour
+  stroke(45, 45, 45);    // This ensures that the borders of all other boxes remain the same colour
   
   if (graphXPos >= 450) {
-    graphXPos = 0;
+    graphXPos = 0;                              // Reset the x position variable if it goes past a certain range (450)
 
     // Reset the graph background - optional, depending on how you want your graph to look
     fill(45, 45, 45);                           // Set the ractangle colour
     rect(270, 350, 520, 100);                   // Box for distance graph
   } else {
-    graphXPos++;
+    graphXPos++;                                // Otherwise, increment the x position variable (similar to Lab 4)
   }
 }
 
@@ -275,32 +260,32 @@ void insertInArray(float array[], float insert) {
  */
 String getDateTime() {
   String dateTime = "";
-  dateTime += str(day());
+  dateTime += str(day());                  // Add the day to the string
   
   switch(month()) {
-    case 1:  dateTime += " Jan "; break;
-    case 2:  dateTime += " Feb "; break;
-    case 3:  dateTime += " Mar "; break;
-    case 4:  dateTime += " Apr "; break;
-    case 5:  dateTime += " May "; break;
-    case 6:  dateTime += " Jun "; break;
-    case 7:  dateTime += " Jul "; break;
-    case 8:  dateTime += " Aug "; break;
-    case 9:  dateTime += " Sep "; break;
-    case 10: dateTime += " Oct "; break;
-    case 11: dateTime += " Nov "; break;
-    case 12: dateTime += " Dec "; break;
-    default: dateTime += " --- "; break;
+    case 1:  dateTime += " Jan "; break;  // Add "Jan" if the month is 1 (i.e. January)
+    case 2:  dateTime += " Feb "; break;  // Add "Feb" if the month is 2 (i.e. February)
+    case 3:  dateTime += " Mar "; break;  // Add "Mar" if the month is 3 (i.e. March)
+    case 4:  dateTime += " Apr "; break;  // Add "Apr" if the month is 4 (i.e. April)
+    case 5:  dateTime += " May "; break;  // Add "May" if the month is 5 (i.e. May)
+    case 6:  dateTime += " Jun "; break;  // Add "Jun" if the month is 6 (i.e. June)
+    case 7:  dateTime += " Jul "; break;  // Add "Jul" if the month is 7 (i.e. July)
+    case 8:  dateTime += " Aug "; break;  // Add "Aug" if the month is 8 (i.e. August)
+    case 9:  dateTime += " Sep "; break;  // Add "Sep" if the month is 9 (i.e. September)
+    case 10: dateTime += " Oct "; break;  // Add "Oct" if the month is 10 (i.e. October)
+    case 11: dateTime += " Nov "; break;  // Add "Nov" if the month is 11 (i.e. November)
+    case 12: dateTime += " Dec "; break;  // Add "Dec" if the month is 12 (i.e. December)
+    default: dateTime += " --- "; break;  // Add "---" otherwise
   }
   
-  dateTime += str(year());
-  dateTime += ", ";
+  dateTime += str(year());                // Add the year to the string
+  dateTime += ", ";                       // Add some formatting
   
-  if (hour() > 12) {
+  if (hour() > 12) {                      // Display PM time
     dateTime += str(hour() % 12) + ":" + str(minute()) + ":" + str(second()) + " PM";
-  } else {
+  } else {                                // or AM time
     dateTime += str(hour()) + ":" + str(minute()) + ":" + str(second()) + " AM";
   }
   
-  return dateTime;
+  return dateTime;                        // Return the date as a formatted string
 }
