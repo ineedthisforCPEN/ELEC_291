@@ -114,13 +114,16 @@ void serialEvent(Serial arduinoPort) {
   try {                                     // Try reading data
     distanceReading = float(dataString);    // Try converting the data into a float
     
-    // Tweet only when an object has crossed the threshold - sends only one tweet as to not spam twitter
-    if (distanceReading < threshold && thresholdFlag == 1) {
-      thresholdFlag = 0;
-      tweet();
-    } else if (distanceReading >= threshold && thresholdFlag == 0) {
-      thresholdFlag = 1;
-      tweet();
+    if (distanceReading >= 1.99 && distanceReading <= 500.1) {
+      // Tweet only when an object has crossed the threshold and if the measurement is in range (with an allowable error of 0.01cm)
+      // Sends only one tweet as to not spam twitter
+      if (distanceReading < threshold && thresholdFlag == 1) {
+        thresholdFlag = 0;
+        tweet();
+      } else if (distanceReading >= threshold && thresholdFlag == 0) {
+        thresholdFlag = 1;
+        tweet();
+      }
     }
   } catch (Exception e) {                   // If conversion fails
     return;                                 // Stop
