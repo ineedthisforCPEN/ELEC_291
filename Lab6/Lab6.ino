@@ -12,10 +12,10 @@ const unsigned char PS_64 = (1 << ADPS2) | (1 << ADPS1);                  // 250
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);  // 125 kHz ADC clock speed
 
 // Baud rate based on ADC prescaler
-const int BAUD_16 = 57600;
-const int BAUD_32 = 38400;
-const int BAUD_64 = 19200;
-const int BAUD_128 = 9600;
+const int BAUD_16 = 57600;    // BAUD rate for PS_16
+const int BAUD_32 = 38400;    // BAUD rate for PS_32
+const int BAUD_64 = 19200;    // BAUD rate for PS_64
+const int BAUD_128 = 9600;    // BAUD rate for PS_128
 
 volatile long start_time;
 int val;
@@ -23,41 +23,54 @@ int val;
 //----------------------------------------
 // ADJUST FOR VARIOUS PRESCALER VALUES
 //----------------------------------------
-int prescale = PS_128;
+int prescale = PS_128;    // The prescaler selected is PS_128 (i.e. 125kHz for the ADC clock)
 
 void setup() {
-  // Begin serial monitor depending on the prescaler selected
-
-  Serial.begin(BAUD_128);
+  cli();  // Disable interrupts while setting up
   
-  pinMode(V_PIN,     INPUT );
-  pinMode(INTERRUPT, OUTPUT);
+  Serial.begin(BAUD_128);     // Because the prescaler is selected as PS_128, the baud rate should be set to BAUD_128
   
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT), __isr__, CHANGE);
-  start_time = -DISPLAY_TIME;
+  pinMode(V_PIN,     INPUT ); // Set up oscilloscope output pin
+  pinMode(INTERRUPT, OUTPUT); // Set up pushbutton interrup pin
+  
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT), __isr__, CHANGE);   // Create the external interrupt
+  start_time = -DISPLAY_TIME; // This is set in an attempt to prevent the Arduino from immediately sending oscilloscope data
 
+  // Set up the prescaler
   ADCSRA &= ~PS_128;
   ADCSRA |= prescale;
-  sei();
+  
+  sei();  // Enable interrupt - the setup is complete
 }
 
 void loop() {
+  // Only run in this loop is the start time has been set within DISPLAY_TIME microseconds of the current Arduino uptime
   while (micros() - start_time < DISPLAY_TIME) {
-    val = analogRead(V_PIN);
-    Serial.write(0xff);
-    Serial.write((val >> 8) & 0xff);
-    Serial.write(val & 0xff);
+    val = analogRead(V_PIN);          // Read oscilloscope value
+    Serial.write(0xff);               // Send initialization byte
+    Serial.write((val >> 8) & 0xff);  // Send the two most significant bits of the 10-bit ADC value 
+    Serial.write(val & 0xff);         // Send the eight least significant bits of the 10-bit ADC value
   }
 
-  sei();
-  Serial.println("Not reading voltage");
+  sei();                                  // Enable interrupts - they would have been disabled if the code entered
+                                          // the while loop above
+  //Serial.println("Not reading voltage");  // Useful debugging print statement
 }
 
+/*
+ * This is the interrupt service routine used when the pushbutton connected to pin 2 is pushed. The ISR
+ * allows the Arduino to enter a part of the code that sends oscilloscope readings for DISPLAY_TIME
+ * microseconds
+ */
 void __isr__(void) {
-  start_time = micros();
-  cli();
+  start_time = micros();  // Set start_time to current arduino uptime (in microseconds)
+  cli();                  // Disable interrupts (so our interrupt code is not interrupted)
 }
 
+/*
+ * The function below is not used, but it is helpful for debugging. It provides some visual aid
+ * to the values read by the Arduino analog pin A0, as well as providing actual A0 readings
+ */
 /*
 void printit(int x) {
   Serial.print(x);
