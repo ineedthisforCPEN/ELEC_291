@@ -1,6 +1,6 @@
 #define V_PIN         A0          // Potentiometer output pin
 #define INTERRUPT     2           // Interrup pin
-#define DISPLAY_TIME  10000000L   // How long to display the signal in microseconds
+#define DISPLAY_TIME  15000000L   // How long to display the signal in microseconds
 
 // Define various ADC prescalers
 // Arduin odocumentation does not recommend setting ADC clock to anything over 200kHz to preserve resolution,
@@ -17,7 +17,7 @@ const int BAUD_32 = 38400;
 const int BAUD_64 = 19200;
 const int BAUD_128 = 9600;
 
-volatile long start_time = -DISPLAY_TIME;
+volatile long start_time;
 int val;
 
 //----------------------------------------
@@ -34,23 +34,28 @@ void setup() {
   pinMode(INTERRUPT, OUTPUT);
   
   attachInterrupt(digitalPinToInterrupt(INTERRUPT), __isr__, CHANGE);
+  start_time = -DISPLAY_TIME;
 
   ADCSRA &= ~PS_128;
   ADCSRA |= prescale;
+  sei();
 }
 
 void loop() {
   while (micros() - start_time < DISPLAY_TIME) {
     val = analogRead(V_PIN);
-    Serial.write(val >> 8);
+    Serial.write(0xff);
+    Serial.write((val >> 8) & 0xff);
     Serial.write(val & 0xff);
   }
 
+  sei();
   Serial.println("Not reading voltage");
 }
 
 void __isr__(void) {
   start_time = micros();
+  cli();
 }
 
 /*
